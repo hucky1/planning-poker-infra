@@ -1,0 +1,24 @@
+name: Infra Validate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate production compose config
+        run: docker compose -f compose.yaml --env-file .env.production.example config
+
+      - name: Validate development compose config
+        run: docker compose -f compose.dev.yaml --env-file .env.example config
+
+      - name: Build development backend and frontend images
+        run: docker compose -f compose.dev.yaml --env-file .env.example build backend frontend
