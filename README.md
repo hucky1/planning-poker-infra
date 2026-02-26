@@ -1,23 +1,23 @@
 # Planning Poker Infra
 
-Local infrastructure repo for the Planning Poker project.
+Infrastructure repository for Planning Poker with explicit local-development and production modes.
 
-## Expected Layout
-
-Clone frontend and backend repos inside this infra repo as sibling folders:
+## Expected Layout (Local Dev)
 
 ```text
 planning-poker-infra/
   planning-poker-frontend/
   planning-poker-backend/
-  compose.yaml
+  compose.yaml              # production baseline (prebuilt images)
+  compose.dev.yaml          # local development stack (bind mounts)
   .env.example
+  .env.production.example
   docker/
   README.md
   .gitignore
 ```
 
-## First-Time Setup
+## First-Time Setup (Local Dev)
 
 ```bash
 git clone git@github.com:hucky1/planning-poker-infra.git planning-poker-infra
@@ -29,46 +29,54 @@ git clone git@github.com:hucky1/planning-poker-backend.git planning-poker-backen
 cp .env.example .env
 ```
 
-## Version Configuration
+## Local Development (compose.dev.yaml)
 
-All runtime versions are controlled from `.env`:
-
-- `PHP_VERSION` (backend base image, example `8.5-fpm`)
-- `COMPOSER_VERSION` (Composer image used to copy composer binary)
-- `NGINX_VERSION` (Symfony web gateway)
-- `NODE_VERSION` (frontend runtime)
-- `XDEBUG_*` (debugger mode and IDE connection settings)
-
-## Bootstrap Latest Symfony
-
-Initialize backend with latest Symfony skeleton and common setup packages:
+Start the full local stack (frontend, php-fpm backend + nginx gateway, postgres, redis):
 
 ```bash
-docker compose run --rm backend sh -lc '
-  set -eu
-  if [ -f /workspace/composer.json ]; then
-    echo "composer.json already exists in planning-poker-backend. Skipping bootstrap."
-    exit 0
-  fi
-  rm -rf /tmp/symfony
-  composer create-project symfony/skeleton:"*" /tmp/symfony
-  cp -a /tmp/symfony/. /workspace/
-  cd /workspace
-  composer require symfony/webapp-pack symfony/orm-pack
-  composer require --dev symfony/maker-bundle
-'
-```
-
-## Local Development
-
-Start all services (frontend, PHP-FPM backend, Nginx gateway):
-
-```bash
-docker compose up --build
+docker compose -f compose.dev.yaml --env-file .env up --build
 ```
 
 Stop and remove containers:
 
 ```bash
-docker compose down
+docker compose -f compose.dev.yaml --env-file .env down
 ```
+
+## Production Baseline (compose.yaml)
+
+`compose.yaml` is production-oriented and expects prebuilt app images:
+
+- `BACKEND_IMAGE`
+- `FRONTEND_IMAGE`
+- external `DATABASE_URL`
+- external `REDIS_URL`
+
+Example run:
+
+```bash
+cp .env.production.example .env.production
+# update values with real images/secrets first
+docker compose -f compose.yaml --env-file .env.production up -d
+```
+
+## Dev Runtime Notes
+
+- `backend` only runs `composer install` when `vendor/` is missing.
+- `frontend` uses `npm ci` when `package-lock.json` exists and `node_modules/` is missing.
+- Optional auto-migration is enabled with `RUN_MIGRATIONS=1` (fail-fast on migration errors).
+- `INSTALL_XDEBUG=0` by default for reliable PHP 8.5 builds; set `INSTALL_XDEBUG=1` only when needed.
+
+## Secrets Strategy
+
+- Keep local defaults in `.env` (from `.env.example`).
+- Keep non-local settings in `.env.production` (from `.env.production.example`).
+- Do not commit real secrets; inject them via CI or secret manager.
+
+## CI Validation
+
+GitHub Actions validates:
+
+- `docker compose -f compose.dev.yaml --env-file .env.example config`
+- `docker compose -f compose.yaml --env-file .env.production.example config`
+- `docker compose -f compose.dev.yaml --env-file .env.example build backend frontend`
