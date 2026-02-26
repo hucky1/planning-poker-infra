@@ -1,0 +1,8 @@
+planning-poker-frontend/
+planning-poker-backend/
+
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
