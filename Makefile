@@ -2,7 +2,7 @@ COMPOSE_FILE ?= compose.dev.yaml
 ENV_FILE ?= .env
 DC = docker compose -f $(COMPOSE_FILE) --env-file $(ENV_FILE)
 
-.PHONY: help up down restart build ps logs backend-sh backend-root-sh symfony composer xdebug-on xdebug-off xdebug-status
+.PHONY: help up down restart build ps logs backend-sh backend-root-sh frontend-sh frontend-root-sh frontend-logs symfony composer npm frontend-build frontend-lint xdebug-on xdebug-off xdebug-status
 
 help:
 	@echo "Usage: make <target> [VAR=value]"
@@ -20,6 +20,14 @@ help:
 	@echo "  make backend-root-sh     Root shell in backend container"
 	@echo "  make symfony CMD='about' Run Symfony console command"
 	@echo "  make composer CMD='install' Run Composer command in backend"
+	@echo ""
+	@echo "Frontend:"
+	@echo "  make frontend-sh         Shell in frontend container"
+	@echo "  make frontend-root-sh    Root shell in frontend container"
+	@echo "  make frontend-logs       Tail frontend logs"
+	@echo "  make npm CMD='run build' Run npm command in frontend"
+	@echo "  make frontend-build      Build Next.js app in frontend container"
+	@echo "  make frontend-lint       Lint frontend app in frontend container"
 	@echo "  make xdebug-on           Enable Xdebug (rebuild backend)"
 	@echo "  make xdebug-off          Disable Xdebug (rebuild backend)"
 	@echo "  make xdebug-status       Show Xdebug status in backend container"
@@ -52,6 +60,15 @@ backend-sh:
 backend-root-sh:
 	$(DC) exec -u root backend sh
 
+frontend-sh:
+	$(DC) exec frontend sh
+
+frontend-root-sh:
+	$(DC) exec -u root frontend sh
+
+frontend-logs:
+	$(DC) logs -f --tail=200 frontend
+
 symfony:
 	@if [ -z "$(CMD)" ]; then echo "Usage: make symfony CMD='about'"; exit 1; fi
 	$(DC) exec backend php bin/console $(CMD)
@@ -59,6 +76,16 @@ symfony:
 composer:
 	@if [ -z "$(CMD)" ]; then echo "Usage: make composer CMD='install'"; exit 1; fi
 	$(DC) exec backend composer $(CMD)
+
+npm:
+	@if [ -z "$(CMD)" ]; then echo "Usage: make npm CMD='run build'"; exit 1; fi
+	$(DC) exec frontend npm $(CMD)
+
+frontend-build:
+	$(DC) exec frontend npm run build
+
+frontend-lint:
+	$(DC) exec frontend npm run lint
 
 xdebug-on:
 	@set -e; \
