@@ -2,7 +2,7 @@ COMPOSE_FILE ?= compose.dev.yaml
 ENV_FILE ?= .env
 DC = docker compose -f $(COMPOSE_FILE) --env-file $(ENV_FILE)
 
-.PHONY: help up down restart build ps logs backend-sh backend-root-sh frontend-sh frontend-root-sh frontend-logs symfony composer npm frontend-build frontend-lint xdebug-on xdebug-off xdebug-status
+.PHONY: help up down restart build ps logs backend-sh backend-root-sh backend-lint backend-lint-staged backend-phpstan backend-deptrac backend-phpcs backend-cs-fixer backend-fix backend-hooks-install frontend-sh frontend-root-sh frontend-logs symfony composer npm frontend-build frontend-lint xdebug-on xdebug-off xdebug-status
 
 help:
 	@echo "Usage: make <target> [VAR=value]"
@@ -20,6 +20,14 @@ help:
 	@echo "  make backend-root-sh     Root shell in backend container"
 	@echo "  make symfony CMD='about' Run Symfony console command"
 	@echo "  make composer CMD='install' Run Composer command in backend"
+	@echo "  make backend-lint        Run all backend static checks"
+	@echo "  make backend-lint-staged Run backend static checks for staged PHP files"
+	@echo "  make backend-phpstan     Run PHPStan (level 8)"
+	@echo "  make backend-deptrac     Run architecture dependency check"
+	@echo "  make backend-phpcs       Run PHP_CodeSniffer"
+	@echo "  make backend-cs-fixer    Run PHP-CS-Fixer in dry-run mode"
+	@echo "  make backend-fix         Run PHPCBF + PHP-CS-Fixer autofixers"
+	@echo "  make backend-hooks-install Install backend git hooks path"
 	@echo ""
 	@echo "Frontend:"
 	@echo "  make frontend-sh         Shell in frontend container"
@@ -76,6 +84,31 @@ symfony:
 composer:
 	@if [ -z "$(CMD)" ]; then echo "Usage: make composer CMD='install'"; exit 1; fi
 	$(DC) exec backend composer $(CMD)
+
+backend-lint:
+	$(DC) exec backend composer lint:all
+
+backend-lint-staged:
+	$(DC) exec backend ./bin/static-check --staged
+
+backend-phpstan:
+	$(DC) exec backend composer lint:phpstan
+
+backend-deptrac:
+	$(DC) exec backend composer lint:deptrac
+
+backend-phpcs:
+	$(DC) exec backend composer lint:phpcs
+
+backend-cs-fixer:
+	$(DC) exec backend composer lint:cs-fixer
+
+backend-fix:
+	$(DC) exec backend composer fix:all
+
+backend-hooks-install:
+	git -C planning-poker-backend config core.hooksPath .githooks
+	git -C planning-poker-backend config --get core.hooksPath
 
 npm:
 	@if [ -z "$(CMD)" ]; then echo "Usage: make npm CMD='run build'"; exit 1; fi
