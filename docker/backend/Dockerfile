@@ -12,7 +12,7 @@ WORKDIR /workspace
 RUN set -eux; \
   apk add --no-cache git unzip icu-dev libzip-dev postgresql-dev; \
   apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers; \
-  docker-php-ext-install intl pdo pdo_pgsql opcache zip; \
+  docker-php-ext-install intl pdo_pgsql zip; \
   if [ "$INSTALL_XDEBUG" = "1" ]; then \
     git init /tmp/xdebug; \
     git -C /tmp/xdebug remote add origin https://github.com/xdebug/xdebug.git; \
