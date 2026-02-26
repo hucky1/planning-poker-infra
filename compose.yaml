@@ -1,0 +1,56 @@
+name: planning-poker
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      args:
+        PHP_VERSION: "${PHP_VERSION:-8.5-fpm}"
+        COMPOSER_VERSION: "${COMPOSER_VERSION:-2}"
+    container_name: planning-poker-backend
+    working_dir: /workspace
+    volumes:
+      - ./planning-poker-backend:/workspace
+      - ./docker/backend/xdebug.ini:/usr/local/etc/php/conf.d/99-xdebug.ini:ro
+    expose:
+      - "9000"
+    environment:
+      APP_ENV: "${APP_ENV:-dev}"
+      APP_DEBUG: "${APP_DEBUG:-1}"
+      COMPOSER_ALLOW_SUPERUSER: "1"
+      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
+      XDEBUG_START_WITH_REQUEST: "${XDEBUG_START_WITH_REQUEST:-trigger}"
+      XDEBUG_CLIENT_HOST: "${XDEBUG_CLIENT_HOST:-host.docker.internal}"
+      XDEBUG_CLIENT_PORT: "${XDEBUG_CLIENT_PORT:-9003}"
+      XDEBUG_DISCOVER_CLIENT_HOST: "${XDEBUG_DISCOVER_CLIENT_HOST:-0}"
+      XDEBUG_IDEKEY: "${XDEBUG_IDEKEY:-VSCODE}"
+
+  backend-web:
+    image: nginx:${NGINX_VERSION:-1.27-alpine}
+    container_name: planning-poker-backend-web
+    depends_on:
+      - backend
+    volumes:
+      - ./planning-poker-backend:/workspace
+      - ./docker/backend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${BACKEND_PORT:-8080}:80"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        NODE_VERSION: "${NODE_VERSION:-20-alpine}"
+    container_name: planning-poker-frontend
+    working_dir: /workspace
+    volumes:
+      - ./planning-poker-frontend:/workspace
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      FRONTEND_PORT: "5173"
+      VITE_API_URL: "${VITE_API_URL:-http://localhost:8080}"
+    depends_on:
+      - backend-web
