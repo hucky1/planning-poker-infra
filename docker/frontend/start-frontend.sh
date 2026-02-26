@@ -16,4 +16,8 @@ if [ ! -d node_modules ]; then
   fi
 fi
 
+if grep -q '"next"' package.json; then
+  exec npm run dev -- --hostname 0.0.0.0 --port "${FRONTEND_PORT:-5173}"
+fi
+
 exec npm run dev -- --host 0.0.0.0 --port "${FRONTEND_PORT:-5173}"
